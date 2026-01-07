@@ -1,5 +1,3 @@
-import './style.css'
-
 const CHECKS = [
   {
     sc: "2.1.1",
@@ -189,7 +187,7 @@ const CHECKS = [
     ],
     pass: ["No missing alt for informative images.", "Decorative images are ignored by AT."],
     fix: [
-      "If image is decorative, use alt=\"\" and do not add aria-label on the image.",
+      'If image is decorative, use alt="" and do not add aria-label on the image.',
       "If icon is inside a button, ensure the button has text, aria-label, or aria-labelledby.",
       "For svg icons, set aria-hidden=true when decorative."
     ],
@@ -680,20 +678,21 @@ function renderKbd(text) {
 function render() {
   const toc = CATS.map(c => `<li><a href="#cat-${c.id}" data-toc>${esc(c.label)}</a></li>`).join("");
 
-  const sections = CATS.map(c => {
-    const items = CHECKS.filter(x => x.category === c.id);
-    if (!items.length) return "";
+  const sections = CATS
+    .map(c => {
+      const items = CHECKS.filter(x => x.category === c.id);
+      if (!items.length) return "";
 
-    const lis = items
-      .map(x => {
-        const pid = `p-${x.sc.replaceAll(".", "")}`;
-        const newPill = x.isNew ? `<span class="pill pillNew">WCAG 2.2</span>` : "";
-        const advPill = x.isAdvanced ? `<span class="pill pillAdv">Advanced</span>` : "";
+      const lis = items
+        .map(x => {
+          const pid = `p-${x.sc.replaceAll(".", "")}`;
+          const newPill = x.isNew ? `<span class="pill pillNew">WCAG 2.2</span>` : "";
+          const advPill = x.isAdvanced ? `<span class="pill pillAdv">Advanced</span>` : "";
 
-        const hasFix = Array.isArray(x.fix) && x.fix.length;
-        const hasDev = Array.isArray(x.devNotes) && x.devNotes.length;
+          const hasFix = Array.isArray(x.fix) && x.fix.length;
+          const hasDev = Array.isArray(x.devNotes) && x.devNotes.length;
 
-        return `
+          return `
         <li class="item" data-item>
           <div class="row">
             <div class="num" aria-hidden="true">${esc(x.sc)}</div>
@@ -707,14 +706,14 @@ function render() {
               ${advPill}
             </div>
             <div class="actions">
-              <button type="button" class="doneBox" aria-pressed="false" aria-label="Mark ${esc(x.sc)} ${esc(x.title)} as done">
-                <svg class="checkIcon" viewBox="0 0 24 24" aria-hidden="true">
+              <button type="button" class="doneBox" role="checkbox" aria-checked="false" aria-label="Mark ${esc(x.sc)} ${esc(x.title)} as done">
+                <svg class="checkIcon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                   <path d="M9.0 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"></path>
                 </svg>
               </button>
               <button type="button" class="toggle" aria-expanded="false" aria-controls="${pid}">
                 <span>Open</span>
-                <svg class="chev" viewBox="0 0 20 20" aria-hidden="true">
+                <svg class="chev" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
                   <path d="M5.25 7.5 10 12.25 14.75 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
                 </svg>
               </button>
@@ -768,16 +767,17 @@ function render() {
           </div>
         </li>
       `;
-      })
-      .join("");
+        })
+        .join("");
 
-    return `
+      return `
       <section id="cat-${c.id}" aria-label="${esc(c.label)}">
         <h2 class="srOnly">${esc(c.label)}</h2>
         <ul class="list" data-list>${lis}</ul>
       </section>
     `;
-  }).join("");
+    })
+    .join("");
 
   const totalCount = CHECKS.length;
 
@@ -876,8 +876,8 @@ function init() {
     let done = 0;
 
     items.forEach(item => {
-      const box = item.querySelector(".doneBox");
-      if (box && box.getAttribute("aria-pressed") === "true") done += 1;
+      const box = item.querySelector('.doneBox[role="checkbox"]');
+      if (box && box.getAttribute("aria-checked") === "true") done += 1;
     });
 
     const pct = total ? Math.round((done / total) * 100) : 0;
@@ -897,31 +897,39 @@ function init() {
       return;
     }
 
-    const doneBox = e.target.closest(".doneBox");
+    const doneBox = e.target.closest('.doneBox[role="checkbox"]');
     if (doneBox) {
-      const pressed = doneBox.getAttribute("aria-pressed") === "true";
-      doneBox.setAttribute("aria-pressed", pressed ? "false" : "true");
+      const checked = doneBox.getAttribute("aria-checked") === "true";
+      doneBox.setAttribute("aria-checked", checked ? "false" : "true");
       updateProgress();
     }
   });
 
   root.addEventListener("keydown", e => {
     const isEscape = e.key === "Escape";
-    if (!isEscape) return;
+    if (isEscape) {
+      const openBtn = root.querySelector('.toggle[aria-expanded="true"]');
+      if (openBtn) {
+        const panelId = openBtn.getAttribute("aria-controls");
+        const panel = document.getElementById(panelId);
+        if (panel) setExpanded(openBtn, panel, false);
+        openBtn.focus();
+      }
+      return;
+    }
 
-    const openBtn = root.querySelector('.toggle[aria-expanded="true"]');
-    if (openBtn) {
-      const panelId = openBtn.getAttribute("aria-controls");
-      const panel = document.getElementById(panelId);
-      if (panel) setExpanded(openBtn, panel, false);
-      openBtn.focus();
+    if (e.key === " ") {
+      const box = e.target.closest('.doneBox[role="checkbox"]');
+      if (!box) return;
+      e.preventDefault();
+      box.click();
     }
   });
 
   resetBtn.addEventListener("click", () => {
     allItems().forEach(item => {
-      const box = item.querySelector(".doneBox");
-      if (box) box.setAttribute("aria-pressed", "false");
+      const box = item.querySelector('.doneBox[role="checkbox"]');
+      if (box) box.setAttribute("aria-checked", "false");
     });
 
     const openBtn = root.querySelector('.toggle[aria-expanded="true"]');
